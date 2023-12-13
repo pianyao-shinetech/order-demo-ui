@@ -4,10 +4,14 @@ import SwipeableViews from 'react-swipeable-views';
 import { styled } from '@mui/material/styles';
 import Badge, { BadgeProps } from '@mui/material/Badge';
 import {
+  Button,
   Container,
   CssBaseline,
+  InputAdornment,
   Slide,
   SlideProps,
+  TextField,
+  alpha,
 } from '@mui/material'
 import { useTheme } from '@mui/material/styles';
 import AppBar from '@mui/material/AppBar';
@@ -17,6 +21,7 @@ import Typography from '@mui/material/Typography';
 import Zoom from '@mui/material/Zoom';
 import Fab from '@mui/material/Fab';
 import PaymentIcon from '@mui/icons-material/Payment';
+import SearchIcon from '@mui/icons-material/Search';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import ShoppingCartCheckoutIcon from '@mui/icons-material/ShoppingCartCheckout';
 import { green } from '@mui/material/colors';
@@ -99,6 +104,7 @@ function App() {
   const theme = useTheme();
   const [value, setValue] = React.useState(0);
   const [cartItems, setCartItems] = React.useState([""]);
+  const [search, setSearch] = React.useState<string>('');
 
   const handleChange = (event: unknown, newValue: number) => {
     setValue(newValue);
@@ -120,6 +126,7 @@ function App() {
       icon: <ShoppingCartIcon />,
       badgeVisible: true,
       label: 'Go to Shopping Cart',
+      targetTab: 1,
     },
     {
       color: 'inherit' as 'inherit',
@@ -127,6 +134,7 @@ function App() {
       icon: <ShoppingCartCheckoutIcon />,
       badgeVisible: true,
       label: 'Checkout',
+      targetTab: 2,
     },
     {
       color: 'primary' as 'primary',
@@ -134,6 +142,7 @@ function App() {
       icon: <PaymentIcon />,
       badgeVisible: false,
       label: 'Go Shopping',
+      targetTab: 2,
     },
   ];
 
@@ -158,10 +167,32 @@ function App() {
                 variant="fullWidth"
                 aria-label="action tabs example"
               >
-                <Tab label="Products" {...a11yProps(0)} />
+                <Tab label="Products" {...a11yProps(0)}/>
                 <Tab label="Shopping Cart" {...a11yProps(1)} />
                 <Tab label="Orders" {...a11yProps(2)} />
               </Tabs>
+                <TextField
+                    fullWidth
+                    value={search}
+                    InputProps={{
+                        'aria-label': 'search',
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <SearchIcon />
+                            </InputAdornment>
+                        ),
+                    }}
+                    size="small"
+                    placeholder="Search..."
+                    color="primary"
+                    sx={{
+                        position: 'absolute',
+                        top: 55,
+                        display: value == 0 ? 'block' : 'none',
+                        backgroundColor: alpha('#FFFFFF', 0.85),
+                        margin: '0 auto',
+                    }}
+                />
             </AppBar>
           </HideOnScroll>
           <SwipeableViews
@@ -170,7 +201,7 @@ function App() {
             onChangeIndex={handleChangeIndex}
           >
             <TabPanel value={value} index={0} dir={theme.direction}>
-              <ProductList search={undefined} pageCursor={1} />
+              <ProductList search={search}/>
             </TabPanel>
             <TabPanel value={value} index={1} dir={theme.direction}>
               Cart Items...
@@ -194,8 +225,10 @@ function App() {
                 badgeContent={cartItems.length} 
                 color="warning" 
                 invisible={cartItems.length === 0 || !fab.badgeVisible}
+                onClick={e=>setValue(fab.targetTab)}
               >
                 {fab.icon}
+                {/* <Button startIcon = {fab.icon} /> */}
               </StyledBadge>
               </Fab>
             </Zoom>

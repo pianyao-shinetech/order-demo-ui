@@ -1,22 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardMedia from '@mui/material/CardMedia';
 import Typography from '@mui/material/Typography';
-import { Button, CardActionArea, CardActions, Grid } from '@mui/material';
+import { Box, Button, ButtonGroup, CardActionArea, CardActions, Fab, Grid } from '@mui/material';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import ProductionQuantityLimitsIcon from '@mui/icons-material/ProductionQuantityLimits';
 import { searchProduct } from './services/DataService';
 import { ProductDTO } from './types/product.dto';
 
-export default function ProductGridWithInfiniteLoading({
-    search,
-    pageCursor
-}) {
+export default function ProductGridWithInfiniteLoading({search}) {
     const [products, setProducts] = useState<Array<ProductDTO>>([]);
-    const [pageNum, setPageNum] = useState<number>(pageCursor);
-    const pageSize = 20;
-    let offlineProducts = [
+    const [pageNum, setPageNum] = useState<number>(1);
+    const numLoaded = useRef<number>(0);
+    const productsTotal = useRef<number>(0);
+    const loading = useRef<boolean>(false);
+    const pageSize = 10;
+    const offlineProducts = [
         {
             "name": "Apple AirTag 4 Pack",
             "url": "https://www.amazon.com/dp/B0932QJ2JZ",
@@ -567,13 +567,39 @@ export default function ProductGridWithInfiniteLoading({
             "categoryUrl": "https://www.amazon.com/Best-Sellers-Electronics/zgbs/electronics/?language=en"
           },          
     ];
+    const myRef = useRef<HTMLDivElement | null>(null)
+    const handleScroll = () => {
+      // console.log("myRef.current?.offsetTop: " + myRef.current?.offsetTop);
+      // console.log("window.innerHeight + document.documentElement.scrollTop: " + (window.innerHeight + document.documentElement.scrollTop) );
+      // console.log("numLoaded: " + numLoaded.current);
+      // console.log("productsTotal: " + productsTotal.current);
+      if (
+        (myRef.current?.offsetTop || Number.POSITIVE_INFINITY) <= window.innerHeight + document.documentElement.scrollTop
+        && numLoaded.current < productsTotal.current
+        && !loading.current
+      ) {
+        setPageNum(pageNum + 1);
+      }
+    }
+    
+    // infinite scrolling
     useEffect(() => {
-        searchProduct(search, pageNum, pageSize).then(async response => {
-            // console.log(response);
-            setProducts(response.page_data);
-        })
-    }, []);
+      loading.current = true;
+      searchProduct(search, pageNum, pageSize).then(async response => {
+        console.log('calling setProducts()...');
+        setProducts(products.concat(response.page_data));
+        // setProducts(offlineProducts);
+        productsTotal.current = (response.total)
+        numLoaded.current = (pageSize * (pageNum - 1) + response.page_data.length);
+        loading.current = false;
+      })
+
+      window.removeEventListener('scroll', handleScroll)
+      window.addEventListener('scroll', handleScroll)
+    }, [pageNum]);
+
     return (
+      <>
         <Grid sx={{ flexGrow: 1 }} container justifyContent="center" spacing={2}>
             {products.map(product => (
                 <Grid key={product.id} item>
@@ -586,22 +612,45 @@ export default function ProductGridWithInfiniteLoading({
                             alt="thumbnail image"
                         />
                         <CardContent>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              p: 0,
+                              m: 0,
+                              bgcolor: 'background.paper',
+                              borderRadius: 1,
+                            }}
+                          >
                             <Typography gutterBottom variant="h5" component="div">
                             $ {product.price}
                             </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                            {product.name}
+                            <Typography variant="button" display="block">
+                            {product.catalog}
                             </Typography>
+                          </Box>
+                          <Typography variant="body2" color="text.secondary">
+                          {product.name}
+                          </Typography>
                         </CardContent>
                         </CardActionArea>
                         <CardActions>
-                        <Button size="small" color="primary">
-                            {product.catalog}
-                        </Button>
+                          <ButtonGroup sx={{ margin: 'auto', width: '75%' }}
+                            disableElevation
+                            variant="contained"
+                          >
+                            <Button sx={{borderRadius: 28}}>-</Button>
+                            <Button startIcon={<AddShoppingCartIcon />}>
+                              Add 1 to Cart
+                            </Button>
+                            <Button sx={{borderRadius: 28}}>+</Button>
+                          </ButtonGroup>
                         </CardActions>
                     </Card>
                 </Grid>
-            ))}
-      </Grid>
+                ))}
+        </Grid>
+        <div ref={myRef} />
+      </>
     );
 }
